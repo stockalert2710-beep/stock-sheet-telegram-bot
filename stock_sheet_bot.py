@@ -10,9 +10,9 @@ import json
 
 # ===== CONFIGURATION =====
 SERVICE_ACCOUNT_JSON = os.environ.get('SERVICE_ACCOUNT_JSON')
-SPREADSHEET_ID = '1-yf6_YGSETFPvFvvSQ9kmBD2GfdwZX-Jh1TP_y1SaZA'
-BOT_TOKEN = os.environ.get('BOT_TOKEN')
-BOT_CHAT_ID = os.environ.get('BOT_CHAT_ID')
+SPREADSHEET_ID = '1Fq8dKl_72XqdrAcA6atIl5kD23lnkYKSzH4wVNCyQUs/edit?gid=0#gid=0'
+BOT_TOKEN = os.environ.get('8988067878:AAHk4G1XsUicBOtfoG_yfLugt9uhtuYus9k')
+BOT_CHAT_ID = os.environ.get('StockSheetAlertBot')
 
 def connect_to_sheets():
     credentials_dict = json.loads(SERVICE_ACCOUNT_JSON)
