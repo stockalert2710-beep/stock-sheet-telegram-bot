@@ -5,28 +5,26 @@ import telebot
 import yfinance as yf
 import datetime
 import time
-
-# ===== CONFIGURATION =====
 import os
 import json
 
+# ===== CONFIGURATION =====
 SERVICE_ACCOUNT_JSON = os.environ.get('SERVICE_ACCOUNT_JSON')
-SPREADSHEET_NAME = 'Stock Alerts'
-BOT_TOKEN = 'YOUR_TELEGRAM_BOT_TOKEN_HERE'
-BOT_CHAT_ID = 'YOUR_TELEGRAM_CHAT_ID_HERE'
+SPREADSHEET_ID = '1-yf6_YGSETFPvFvvSQ9kmBD2GfdwZX-Jh1TP_y1SaZA'
+BOT_TOKEN = os.environ.get('BOT_TOKEN')
+BOT_CHAT_ID = os.environ.get('BOT_CHAT_ID')
 
 def connect_to_sheets():
-    # Parse JSON from environment variable
     credentials_dict = json.loads(SERVICE_ACCOUNT_JSON)
-  credentials = service_account.Credentials.from_service_account_info(
-    credentials_dict,
-    scopes=[
-        'https://www.googleapis.com/auth/spreadsheets',
-        'https://www.googleapis.com/auth/drive'
-    ]
-)
+    credentials = service_account.Credentials.from_service_account_info(
+        credentials_dict,
+        scopes=[
+            'https://www.googleapis.com/auth/spreadsheets',
+            'https://www.googleapis.com/auth/drive'
+        ]
+    )
     gc = gspread.Client(auth=credentials)
-    sh = gc.open(SPREADSHEET_NAME)
+    sh = gc.open_by_key(SPREADSHEET_ID)
     sheet = sh.sheet1
     return sheet
 
