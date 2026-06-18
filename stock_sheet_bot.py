@@ -88,7 +88,7 @@ Trigger: ₹{stock['trigger']}
 Current: ₹{get_live_price(stock['ID'])}
 Remarks: {stock['remarks']}"""
     
-    bot = telebot.Bot(BOT_TOKEN)
+    bot = telebot.TeleBot(BOT_TOKEN)
     bot.send_message(BOT_CHAT_ID, message)
 
 def monitor_stocks():
