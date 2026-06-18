@@ -8,11 +8,10 @@ import time
 import os
 import json
 
-# ===== CONFIGURATION =====
 SERVICE_ACCOUNT_JSON = os.environ.get('SERVICE_ACCOUNT_JSON')
 SPREADSHEET_ID = '1Fq8dKl_72XqdrAcA6atIl5kD23lnkYKSzH4wVNCyQUs'
 BOT_TOKEN = '8988067878:AAHk4G1XsUicBOtfoG_yfLugt9uhtuYus9k'
-BOT_CHAT_ID = 'StockSheetAlertBot'
+BOT_CHAT_ID = 'YOUR_CHAT_ID_NUMBER_HERE'
 
 def connect_to_sheets():
     credentials_dict = json.loads(SERVICE_ACCOUNT_JSON)
@@ -32,56 +31,49 @@ def read_sheet_data():
     sheet = connect_to_sheets()
     data = sheet.get_all_values()
     
-    print(f"\n📄 Total rows in sheet: {len(data)}")
+    print(f"\n📄 Total rows: {len(data)}")
     
     if len(data) < 2:
-        print("❌ Less than 2 rows in sheet")
         return []
     
     stocks = []
     for i, row in enumerate(data[1:], 1):
-        print(f"\n🔍 Row {i}: {row}")
+        print(f"\n🔍 Row {i}: len={len(row)}")
         
-        if len(row) >= 13:
-            print(f"  ✓ Has 13+ columns")
-            
-            # Trigger is at index 8 (column I), not 7
-            if row[8] == '':
-                print(f"  ⚠️ Empty Trigger (column I)")
-                continue
-            
-            try:
-                stock = {
-                    'name': row[1],           # Name
-                    'exchange': row[2],       # Exchange
-                    'ID': row[3],             # ID
-                    'elliot_position': row[5], # Elliot position
-                    'price_bo': row[6],        # Price BO?
-                    'rsi_bo': row[7],          # RSI BO
-                    'trigger': float(row[8]),  # Trigger (index 8)
-                    'buying_zone': row[9],     # Buying zone
-                    'SL': row[10],             # SL
-                    'T&T': row[11],            # T&T
-                    'remarks': row[12]         # Remarks
-                }
-                stocks.append(stock)
-                print(f"  ✅ Added: {stock['name']}")
-            except ValueError as e:
-                print(f"  ❌ ValueError: {e}")
-                continue
-        else:
-            print(f"  ⚠️ Less than 13 columns ({len(row)})")
+        if len(row) < 13:
+            print(f"  Skip: less than 13 cols")
+            continue
+        
+        if row[8] == '':
+            print(f"  Skip: empty Trigger")
+            continue
+        
+        try:
+            stocks.append({
+                'name': row[1],
+                'exchange': row[2],
+                'ID': row[3],
+                'elliot_position': row[5],
+                'price_bo': row[6],
+                'rsi_bo': row[7],
+                'trigger': float(row[8]),
+                'buying_zone': row[9],
+                'SL': row[10],
+                'T&T': row[11],
+                'remarks': row[12]
+            })
+            print(f"  ✅ Added: {row[1]}")
+        except ValueError as e:
+            print(f"  ❌ Skip: {e}")
     
-    print(f"\n📊 Total stocks fetched: {len(stocks)}")
+    print(f"\n📊 Total: {len(stocks)} stocks")
     return stocks
 
 def get_live_price(symbol):
     try:
         stock = yf.Ticker(symbol)
         data = stock.history(period='1d')
-        if len(data) > 0:
-            return data['Close'].iloc[-1]
-        return None
+        return data['Close'].iloc[-1] if len(data) > 0 else None
     except:
         return None
 
@@ -89,46 +81,32 @@ def check_alert_triggered(cmp, trigger):
     return cmp >= trigger
 
 def send_telegram_alert(stock):
-    message = f"""🚨 **ALERT TRIGGERED!** 🚨
+    message = f"""🚨 ALERT! 🚨
 
-📊 Stock: {stock['name']}
-Exchange: {stock['exchange']}
-ID: {stock['ID']}
-
-💰 Price Alert:
-• Trigger: ₹{stock['trigger']}
-• Buying Zone: {stock['buying_zone']}
-• SL: {stock['SL']}
-• T&T: {stock['T&T']}
-
-📝 Remarks: {stock['remarks']}
-
-⏰ {datetime.datetime.now().strftime('%d %b %Y, %H:%M:%S')}"""
+Stock: {stock['name']} ({stock['ID']})
+Trigger: ₹{stock['trigger']}
+Current: ₹{get_live_price(stock['ID'])}
+Remarks: {stock['remarks']}"""
     
     bot = telebot.Bot(BOT_TOKEN)
-    bot.send_message(BOT_CHAT_ID, message, parse_mode='Markdown')
+    bot.send_message(BOT_CHAT_ID, message)
 
 def monitor_stocks():
-    print(f"\n🔍 Checking stocks at {datetime.datetime.now()}...")
     stocks = read_sheet_data()
-    
     print(f"\n📦 Stocks: {stocks}")
-    print(f"📦 Stocks count: {len(stocks)}")
     
     if len(stocks) == 0:
-        print("No stocks found")
+        print("No stocks")
         return
     
-    print(f"\nMonitoring {len(stocks)} stocks...")
-    
     for stock in stocks:
-        live_price = get_live_price(stock['ID'])
-        if live_price:
-            if check_alert_triggered(live_price, stock['trigger']):
+        price = get_live_price(stock['ID'])
+        if price:
+            if check_alert_triggered(price, stock['trigger']):
                 send_telegram_alert(stock)
-                print(f"✓ Alert sent for {stock['name']}")
+                print(f"✓ Alert: {stock['name']}")
             else:
-                print(f"✓ {stock['name']}: ₹{live_price:.2f} (Trigger: ₹{stock['trigger']})")
+                print(f"✓ {stock['name']}: ₹{price:.2f}")
 
 if __name__ == "__main__":
     monitor_stocks()
