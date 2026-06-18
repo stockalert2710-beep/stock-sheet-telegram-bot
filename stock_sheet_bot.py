@@ -133,3 +133,25 @@ if __name__ == "__main__":
         run_periodically()
     else:
         monitor_stocks()
+
+from flask import Flask, request
+
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "Server is running"
+
+@app.route("/run")
+def run():
+    key = request.args.get("key")
+    
+    if key != "secret123":
+        return "Unauthorized", 403
+
+    monitor_stocks()
+    return "Script executed"
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
