@@ -9,27 +9,13 @@ import json
 import schedule
 import pytz
 from flask import Flask, request
+import os
 
 # Set timezone to IST
 ist = pytz.timezone('Asia/Kolkata')
 
-# Your credentials (hardcoded for Uptime Robot)
-SERVICE_ACCOUNT_JSON = """
-{
-  "type": "service_account",
-  "project_id": "your-project-id",
-  "private_key_id": "your-key-id",
-  "private_key": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n",
-  "client_email": "your-email@your-project.iam.gserviceaccount.com",
-  "client_id": "your-client-id",
-  "auth_uri": "https://accounts.google.com/o/oauth2",
-  "token_uri": "https://oauth2.googleapis.com/token",
-  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-  "client_x509_cert_url": "https://...",
-  "universe_domain": "googleapis.com"
-}
-"""
-
+# Get from Render environment variable (NOT hardcoded)
+SERVICE_ACCOUNT_JSON = os.environ.get('SERVICE_ACCOUNT_JSON')
 SPREADSHEET_ID = '1Fq8dKl_72XqdrAcA6atIl5kD23lnkYKSzH4wVNCyQUs'
 BOT_TOKEN = '8988067878:AAHk4G1XsUicBOtfoG_yfLugt9uhtuYus9k'
 BOT_CHAT_ID = '615256683'
@@ -65,6 +51,9 @@ def get_ist_time():
 
 def connect_to_sheets():
     """Connect to Google Sheets"""
+    if not SERVICE_ACCOUNT_JSON:
+        raise Exception("SERVICE_ACCOUNT_JSON environment variable not set!")
+    
     credentials_dict = json.loads(SERVICE_ACCOUNT_JSON)
     credentials = service_account.Credentials.from_service_account_info(
         credentials_dict,
@@ -195,5 +184,5 @@ def run():
 
 
 if __name__ == "__main__":
-    # For Uptime Robot: Run periodically
+    # For Render: Run periodically
     run_periodically()
