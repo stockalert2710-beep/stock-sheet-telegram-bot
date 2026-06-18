@@ -18,10 +18,13 @@ BOT_CHAT_ID = 'YOUR_TELEGRAM_CHAT_ID_HERE'
 def connect_to_sheets():
     # Parse JSON from environment variable
     credentials_dict = json.loads(SERVICE_ACCOUNT_JSON)
-    credentials = service_account.Credentials.from_service_account_info(
-        credentials_dict,
-        scopes=['https://www.googleapis.com/auth/spreadsheets']
-    )
+  credentials = service_account.Credentials.from_service_account_info(
+    credentials_dict,
+    scopes=[
+        'https://www.googleapis.com/auth/spreadsheets',
+        'https://www.googleapis.com/auth/drive'
+    ]
+)
     gc = gspread.Client(auth=credentials)
     sh = gc.open(SPREADSHEET_NAME)
     sheet = sh.sheet1
