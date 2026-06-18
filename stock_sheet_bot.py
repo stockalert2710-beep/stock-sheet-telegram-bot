@@ -37,15 +37,22 @@ def read_sheet_data():
     stocks = []
     for row in data[1:]:
         if len(row) >= 9:
-            stocks.append({
-                'name': row[0],
-                'symbol': row[1],
-                'sector': row[2],
-                'industry': row[3],
-                'cmp': float(row[6]),
-                'trigger': float(row[7]),
-                'condition': row[8]
-            })
+            # Skip rows with empty CMP or Trigger
+            if row[6] == '' or row[7] == '' or row[8] == '':
+                continue
+            
+            try:
+                stocks.append({
+                    'name': row[0],
+                    'symbol': row[1],
+                    'sector': row[2],
+                    'industry': row[3],
+                    'cmp': float(row[6]),
+                    'trigger': float(row[7]),
+                    'condition': row[8]
+                })
+            except ValueError:
+                continue
     return stocks
 
 def get_live_price(symbol):
