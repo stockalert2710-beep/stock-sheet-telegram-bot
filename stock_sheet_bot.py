@@ -60,7 +60,53 @@ def read_sheet_data():
                 continue
                 
     return stocks
-
+def read_sheet_data():
+    sheet = connect_to_sheets()
+    data = sheet.get_all_values()
+    
+    # DEBUG: Print what we got
+    print(f"\n📄 Total rows in sheet: {len(data)}")
+    print(f"📄 Headers: {data[0] if len(data) > 0 else 'No headers'}")
+    
+    if len(data) < 2:
+        print("❌ Less than 2 rows in sheet")
+        return []
+    
+    stocks = []
+    for i, row in enumerate(data[1:], 1):
+        print(f"\n🔍 Row {i}: {row}")
+        
+        if len(row) >= 12:
+            print(f"  ✓ Has 12+ columns")
+            
+            if row[7] == '':
+                print(f"  ⚠️ Empty Trigger (column H)")
+                continue
+            
+            try:
+                stock = {
+                    'name': row[1],
+                    'exchange': row[2],
+                    'ID': row[3],
+                    'elliot_position': row[4],
+                    'price_bo': row[5],
+                    'rsi_bo': row[6],
+                    'trigger': float(row[7]),
+                    'buying_zone': row[8],
+                    'SL': row[9],
+                    'T&T': row[10],
+                    'remarks': row[11]
+                }
+                stocks.append(stock)
+                print(f"  ✅ Added: {stock['name']}")
+            except ValueError as e:
+                print(f"  ❌ ValueError: {e}")
+                continue
+        else:
+            print(f"  ⚠️ Less than 12 columns ({len(row)})")
+    
+    print(f"\n📊 Total stocks fetched: {len(stocks)}")
+    return stocks
 def get_live_price(symbol):
     try:
         stock = yf.Ticker(symbol)
@@ -97,6 +143,12 @@ ID: {stock['ID']}
 def monitor_stocks():
     print(f"\n🔍 Checking stocks at {datetime.datetime.now()}...")
     stocks = read_sheet_data()
+    
+    print(f"\n📦 Stocks object: {stocks}")  # DEBUG
+    print(f"📦 Stocks type: {type(stocks)}")  # DEBUG
+    print(f"📦 Stocks length: {len(stocks)}")  # DEBUG
+    
+    # Rest of code...
     
     if len(stocks) == 0:
         print("No stocks found")
