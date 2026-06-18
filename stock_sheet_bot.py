@@ -57,7 +57,7 @@ def read_sheet_data():
                 })
             except ValueError:
                 continue
-                print stocks
+                print stocks()
     return stocks
 
 def get_live_price(symbol):
