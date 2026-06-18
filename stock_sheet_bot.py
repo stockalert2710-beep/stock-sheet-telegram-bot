@@ -71,13 +71,13 @@ Industry: {stock['industry']}
 • Trigger: ₹{stock['trigger']}
 • Condition: {stock['condition']}
 
-⏰ {datetime.now().strftime('%d %b %Y, %H:%M:%S')}"""
+⏰ {datetime.datetime.now().strftime('%d %b %Y, %H:%M:%S')}"""
     
     bot = telebot.Bot(BOT_TOKEN)
     bot.send_message(BOT_CHAT_ID, message, parse_mode='Markdown')
 
 def monitor_stocks():
-    print(f"\n🔍 Checking stocks at {datetime.now()}...")
+    print(f"\n🔍 Checking stocks at {datetime.datetime.now()}...")
     stocks = read_sheet_data()
     
     if len(stocks) == 0:
