@@ -11,8 +11,8 @@ import json
 # ===== CONFIGURATION =====
 SERVICE_ACCOUNT_JSON = os.environ.get('SERVICE_ACCOUNT_JSON')
 SPREADSHEET_ID = '1Fq8dKl_72XqdrAcA6atIl5kD23lnkYKSzH4wVNCyQUs'
-BOT_TOKEN = os.environ.get('8988067878:AAHk4G1XsUicBOtfoG_yfLugt9uhtuYus9k')
-BOT_CHAT_ID = os.environ.get('StockSheetAlertBot')
+BOT_TOKEN = '8988067878:AAHk4G1XsUicBOtfoG_yfLugt9uhtuYus9k'
+BOT_CHAT_ID = 'YOUR_CHAT_ID_NUMBER_HERE'  # Replace with your chat ID number
 
 def connect_to_sheets():
     credentials_dict = json.loads(SERVICE_ACCOUNT_JSON)
@@ -36,20 +36,24 @@ def read_sheet_data():
     
     stocks = []
     for row in data[1:]:
-        if len(row) >= 9:
-            # Skip rows with empty CMP or Trigger
-            if row[6] == '' or row[7] == '' or row[8] == '':
+        if len(row) >= 12:
+            # Skip rows with empty Trigger (column H = index 7)
+            if row[7] == '':
                 continue
             
             try:
                 stocks.append({
-                    'name': row[0],
-                    'symbol': row[1],
-                    'sector': row[2],
-                    'industry': row[3],
-                    'cmp': float(row[6]),
-                    'trigger': float(row[7]),
-                    'condition': row[8]
+                    'name': row[1],           # B: Name
+                    'exchange': row[2],       # C: Exchange
+                    'ID': row[3],             # D: ID
+                    'elliot_position': row[4], # E: Elliot position
+                    'price_bo': row[5],        # F: Price BO?
+                    'rsi_bo': row[6],          # G: RSI BO
+                    'trigger': float(row[7]),  # H: Trigger
+                    'buying_zone': row[8],     # I: Buying zone
+                    'SL': row[9],              # J: SL
+                    'T&T': row[10],            # K: T&T
+                    'remarks': row[11]         # L: Remarks
                 })
             except ValueError:
                 continue
@@ -65,24 +69,23 @@ def get_live_price(symbol):
     except:
         return None
 
-def check_alert_triggered(cmp, trigger, condition):
-    if condition == 'more than':
-        return cmp >= trigger
-    elif condition == 'less than':
-        return cmp <= trigger
-    return False
+def check_alert_triggered(cmp, trigger):
+    return cmp >= trigger
 
 def send_telegram_alert(stock):
     message = f"""🚨 **ALERT TRIGGERED!** 🚨
 
-📊 Stock: {stock['name']} ({stock['symbol']})
-Sector: {stock['sector']}
-Industry: {stock['industry']}
+📊 Stock: {stock['name']}
+Exchange: {stock['exchange']}
+ID: {stock['ID']}
 
 💰 Price Alert:
-• CMP: ₹{stock['cmp']:.2f}
 • Trigger: ₹{stock['trigger']}
-• Condition: {stock['condition']}
+• Buying Zone: {stock['buying_zone']}
+• SL: {stock['SL']}
+• T&T: {stock['T&T']}
+
+📝 Remarks: {stock['remarks']}
 
 ⏰ {datetime.datetime.now().strftime('%d %b %Y, %H:%M:%S')}"""
     
@@ -100,13 +103,14 @@ def monitor_stocks():
     print(f"Monitoring {len(stocks)} stocks...")
     
     for stock in stocks:
-        live_price = get_live_price(stock['symbol'])
+        # Use ID as symbol for yfinance
+        live_price = get_live_price(stock['ID'])
         if live_price:
-            if check_alert_triggered(live_price, stock['trigger'], stock['condition']):
+            if check_alert_triggered(live_price, stock['trigger']):
                 send_telegram_alert(stock)
                 print(f"✓ Alert sent for {stock['name']}")
             else:
-                print(f"✓ {stock['name']}: ₹{live_price:.2f}")
+                print(f"✓ {stock['name']}: ₹{live_price:.2f} (Trigger: ₹{stock['trigger']})")
 
 if __name__ == "__main__":
     monitor_stocks()
