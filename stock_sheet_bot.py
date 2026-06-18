@@ -33,7 +33,6 @@ def read_sheet_data():
     data = sheet.get_all_values()
     
     print(f"\n📄 Total rows in sheet: {len(data)}")
-    print(f"📄 Headers: {data[0] if len(data) > 0 else 'No headers'}")
     
     if len(data) < 2:
         print("❌ Less than 2 rows in sheet")
@@ -43,26 +42,27 @@ def read_sheet_data():
     for i, row in enumerate(data[1:], 1):
         print(f"\n🔍 Row {i}: {row}")
         
-        if len(row) >= 12:
-            print(f"  ✓ Has 12+ columns")
+        if len(row) >= 13:
+            print(f"  ✓ Has 13+ columns")
             
-            if row[7] == '':
-                print(f"  ⚠️ Empty Trigger (column H)")
+            # Trigger is at index 8 (column I), not 7
+            if row[8] == '':
+                print(f"  ⚠️ Empty Trigger (column I)")
                 continue
             
             try:
                 stock = {
-                    'name': row[1],
-                    'exchange': row[2],
-                    'ID': row[3],
-                    'elliot_position': row[4],
-                    'price_bo': row[5],
-                    'rsi_bo': row[6],
-                    'trigger': float(row[7]),
-                    'buying_zone': row[8],
-                    'SL': row[9],
-                    'T&T': row[10],
-                    'remarks': row[11]  # <-- COMMA ADDED HERE
+                    'name': row[1],           # Name
+                    'exchange': row[2],       # Exchange
+                    'ID': row[3],             # ID
+                    'elliot_position': row[5], # Elliot position
+                    'price_bo': row[6],        # Price BO?
+                    'rsi_bo': row[7],          # RSI BO
+                    'trigger': float(row[8]),  # Trigger (index 8)
+                    'buying_zone': row[9],     # Buying zone
+                    'SL': row[10],             # SL
+                    'T&T': row[11],            # T&T
+                    'remarks': row[12]         # Remarks
                 }
                 stocks.append(stock)
                 print(f"  ✅ Added: {stock['name']}")
@@ -70,7 +70,7 @@ def read_sheet_data():
                 print(f"  ❌ ValueError: {e}")
                 continue
         else:
-            print(f"  ⚠️ Less than 12 columns ({len(row)})")
+            print(f"  ⚠️ Less than 13 columns ({len(row)})")
     
     print(f"\n📊 Total stocks fetched: {len(stocks)}")
     return stocks
@@ -112,9 +112,8 @@ def monitor_stocks():
     print(f"\n🔍 Checking stocks at {datetime.datetime.now()}...")
     stocks = read_sheet_data()
     
-    print(f"\n📦 Stocks object: {stocks}")
-    print(f"📦 Stocks type: {type(stocks)}")
-    print(f"📦 Stocks length: {len(stocks)}")
+    print(f"\n📦 Stocks: {stocks}")
+    print(f"📦 Stocks count: {len(stocks)}")
     
     if len(stocks) == 0:
         print("No stocks found")
