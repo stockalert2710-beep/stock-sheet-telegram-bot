@@ -7,14 +7,19 @@ import datetime
 import time
 
 # ===== CONFIGURATION =====
-SERVICE_ACCOUNT_FILE = 'service_account.json'
+import os
+import json
+
+SERVICE_ACCOUNT_JSON = os.environ.get('SERVICE_ACCOUNT_JSON')
 SPREADSHEET_NAME = 'Stock Alerts'
 BOT_TOKEN = 'YOUR_TELEGRAM_BOT_TOKEN_HERE'
 BOT_CHAT_ID = 'YOUR_TELEGRAM_CHAT_ID_HERE'
 
 def connect_to_sheets():
-    credentials = service_account.Credentials.from_service_account_file(
-        SERVICE_ACCOUNT_FILE,
+    # Parse JSON from environment variable
+    credentials_dict = json.loads(SERVICE_ACCOUNT_JSON)
+    credentials = service_account.Credentials.from_service_account_info(
+        credentials_dict,
         scopes=['https://www.googleapis.com/auth/spreadsheets']
     )
     gc = gspread.Client(auth=credentials)
