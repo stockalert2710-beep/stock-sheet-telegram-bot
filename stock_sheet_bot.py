@@ -10,16 +10,16 @@ import os
 import json
 from flask import Flask, request
 
-# ================= CONFIG =================
+# CONFIG
 
 SERVICE_ACCOUNT_JSON = os.environ.get('SERVICE_ACCOUNT_JSON')
 SPREADSHEET_ID = '1Fq8dKl_72XqdrAcA6atIl5kD23lnkYKSzH4wVNCyQUs'
-BOT_TOKEN = 'YOUR_TELEGRAM_BOT_TOKEN'
-BOT_CHAT_ID = 'YOUR_CHAT_ID'
+BOT_TOKEN = 'YOUR_NEW_TOKEN'
+BOT_CHAT_ID = '615256683'
 
 IST = pytz.timezone('Asia/Kolkata')
 
-# ================= GOOGLE SHEETS =================
+# GOOGLE SHEETS
 
 def connect_to_sheets():
 credentials_dict = json.loads(SERVICE_ACCOUNT_JSON)
@@ -49,7 +49,6 @@ for row in data[1:]:
     try:
         stocks.append({
             'name': row[1],
-            'exchange': row[2],
             'ID': row[3],
             'trigger': float(row[8]),
             'remarks': row[12]
@@ -60,7 +59,7 @@ for row in data[1:]:
 return stocks
 ```
 
-# ================= STOCK DATA =================
+# STOCK DATA
 
 def get_live_price(symbol):
 try:
@@ -82,44 +81,38 @@ bot = telebot.TeleBot(BOT_TOKEN)
 bot.send_message(BOT_CHAT_ID, message)
 ```
 
-# ================= MAIN LOGIC =================
+# MAIN LOGIC
 
 def monitor_stocks():
 now = datetime.now(IST)
-print(f"\n⏰ IST Time: {now}")
+print(f"⏰ IST Time: {now}")
 
 ```
-# ✅ Weekday check (Mon–Fri)
+# Weekdays only
 if now.weekday() >= 5:
-    print("⛔ Weekend - Skipping")
+    print("Weekend - Skip")
     return
 
-# ✅ Market hours (IST)
+# Market hours
 start = now.replace(hour=9, minute=15, second=0, microsecond=0)
-end   = now.replace(hour=15, minute=30, second=0, microsecond=0)
+end = now.replace(hour=15, minute=30, second=0, microsecond=0)
 
 if not (start <= now <= end):
-    print("⛔ Outside market hours")
+    print("Outside market hours")
     return
 
 stocks = read_sheet_data()
-
-if not stocks:
-    print("No stocks found")
-    return
 
 for stock in stocks:
     price = get_live_price(stock['ID'])
     if price and price >= stock['trigger']:
         send_telegram_alert(stock, price)
-        print(f"🚨 Alert sent: {stock['name']}")
+        print(f"Alert sent: {stock['name']}")
     elif price:
         print(f"{stock['name']}: ₹{price:.2f}")
-    else:
-        print(f"⚠️ No data: {stock['name']}")
 ```
 
-# ================= FLASK =================
+# FLASK
 
 app = Flask(**name**)
 
@@ -139,7 +132,7 @@ monitor_stocks()
 return "Executed"
 ```
 
-# ================= START =================
+# START
 
 if **name** == "**main**":
 port = int(os.environ.get("PORT", 10000))
