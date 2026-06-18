@@ -7,6 +7,7 @@ import datetime
 import time
 import os
 import json
+import schedule
 
 SERVICE_ACCOUNT_JSON = os.environ.get('SERVICE_ACCOUNT_JSON')
 SPREADSHEET_ID = '1Fq8dKl_72XqdrAcA6atIl5kD23lnkYKSzH4wVNCyQUs'
@@ -92,6 +93,7 @@ Remarks: {stock['remarks']}"""
     bot.send_message(BOT_CHAT_ID, message)
 
 def monitor_stocks():
+    print(f"\n⏰ Running stock check at {datetime.datetime.now()}")
     stocks = read_sheet_data()
     print(f"\n📦 Stocks: {stocks}")
     
@@ -107,6 +109,27 @@ def monitor_stocks():
                 print(f"✓ Alert: {stock['name']}")
             else:
                 print(f"✓ {stock['name']}: ₹{price:.2f}")
+        else:
+            print(f"⚠️ No price data for {stock['name']}")
+
+def run_periodically():
+    """Run monitor_stocks every 15 minutes"""
+    print("🔄 Starting periodic stock monitor (15 min intervals)")
+    
+    # Run immediately
+    monitor_stocks()
+    
+    # Schedule every 15 minutes
+    schedule.every(15).minutes.do(monitor_stocks)
+    
+    # Keep running
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
 
 if __name__ == "__main__":
-    monitor_stocks()
+    # Check if running as cron job or periodically
+    if os.environ.get('RUN_PERIODICALLY') == 'true':
+        run_periodically()
+    else:
+        monitor_stocks()
