@@ -1,157 +1,146 @@
 # -*- coding: utf-8 -*-
+
 import gspread
 from google.oauth2 import service_account
 import telebot
 import yfinance as yf
-import datetime
-import time
+from datetime import datetime
+import pytz
 import os
 import json
-import schedule
+from flask import Flask, request
+
+# ================= CONFIG =================
 
 SERVICE_ACCOUNT_JSON = os.environ.get('SERVICE_ACCOUNT_JSON')
 SPREADSHEET_ID = '1Fq8dKl_72XqdrAcA6atIl5kD23lnkYKSzH4wVNCyQUs'
-BOT_TOKEN = '8988067878:AAHk4G1XsUicBOtfoG_yfLugt9uhtuYus9k'
-BOT_CHAT_ID = '615256683'
+BOT_TOKEN = 'YOUR_TELEGRAM_BOT_TOKEN'
+BOT_CHAT_ID = 'YOUR_CHAT_ID'
+
+IST = pytz.timezone('Asia/Kolkata')
+
+# ================= GOOGLE SHEETS =================
 
 def connect_to_sheets():
-    credentials_dict = json.loads(SERVICE_ACCOUNT_JSON)
-    credentials = service_account.Credentials.from_service_account_info(
-        credentials_dict,
-        scopes=[
-            'https://www.googleapis.com/auth/spreadsheets',
-            'https://www.googleapis.com/auth/drive'
-        ]
-    )
-    gc = gspread.Client(auth=credentials)
-    sh = gc.open_by_key(SPREADSHEET_ID)
-    sheet = sh.sheet1
-    return sheet
+credentials_dict = json.loads(SERVICE_ACCOUNT_JSON)
+credentials = service_account.Credentials.from_service_account_info(
+credentials_dict,
+scopes=[
+'https://www.googleapis.com/auth/spreadsheets',
+'https://www.googleapis.com/auth/drive'
+]
+)
+gc = gspread.Client(auth=credentials)
+return gc.open_by_key(SPREADSHEET_ID).sheet1
 
 def read_sheet_data():
-    sheet = connect_to_sheets()
-    data = sheet.get_all_values()
-    
-    print(f"\n📄 Total rows: {len(data)}")
-    
-    if len(data) < 2:
-        return []
-    
-    stocks = []
-    for i, row in enumerate(data[1:], 1):
-        print(f"\n🔍 Row {i}: len={len(row)}")
-        
-        if len(row) < 13:
-            print(f"  Skip: less than 13 cols")
-            continue
-        
-        if row[8] == '':
-            print(f"  Skip: empty Trigger")
-            continue
-        
-        try:
-            stocks.append({
-                'name': row[1],
-                'exchange': row[2],
-                'ID': row[3],
-                'elliot_position': row[5],
-                'price_bo': row[6],
-                'rsi_bo': row[7],
-                'trigger': float(row[8]),
-                'buying_zone': row[9],
-                'SL': row[10],
-                'T&T': row[11],
-                'remarks': row[12]
-            })
-            print(f"  ✅ Added: {row[1]}")
-        except ValueError as e:
-            print(f"  ❌ Skip: {e}")
-    
-    print(f"\n📊 Total: {len(stocks)} stocks")
-    return stocks
+sheet = connect_to_sheets()
+data = sheet.get_all_values()
+
+```
+if len(data) < 2:
+    return []
+
+stocks = []
+for row in data[1:]:
+    if len(row) < 13 or row[8] == '':
+        continue
+
+    try:
+        stocks.append({
+            'name': row[1],
+            'exchange': row[2],
+            'ID': row[3],
+            'trigger': float(row[8]),
+            'remarks': row[12]
+        })
+    except:
+        continue
+
+return stocks
+```
+
+# ================= STOCK DATA =================
 
 def get_live_price(symbol):
-    try:
-        stock = yf.Ticker(symbol)
-        data = stock.history(period='1d')
-        return data['Close'].iloc[-1] if len(data) > 0 else None
-    except:
-        return None
+try:
+data = yf.Ticker(symbol).history(period='1d')
+return data['Close'].iloc[-1] if len(data) > 0 else None
+except:
+return None
 
-def check_alert_triggered(cmp, trigger):
-    return cmp >= trigger
-
-def send_telegram_alert(stock):
-    message = f"""🚨 ALERT! 🚨
+def send_telegram_alert(stock, price):
+message = f"""🚨 ALERT! 🚨
 
 Stock: {stock['name']} ({stock['ID']})
 Trigger: ₹{stock['trigger']}
-Current: ₹{get_live_price(stock['ID'])}
+Current: ₹{price:.2f}
 Remarks: {stock['remarks']}"""
-    
-    bot = telebot.TeleBot(BOT_TOKEN)
-    bot.send_message(BOT_CHAT_ID, message)
+
+```
+bot = telebot.TeleBot(BOT_TOKEN)
+bot.send_message(BOT_CHAT_ID, message)
+```
+
+# ================= MAIN LOGIC =================
 
 def monitor_stocks():
-    print(f"\n⏰ Running stock check at {datetime.datetime.now()}")
-    stocks = read_sheet_data()
-    print(f"\n📦 Stocks: {stocks}")
-    
-    if len(stocks) == 0:
-        print("No stocks")
-        return
-    
-    for stock in stocks:
-        price = get_live_price(stock['ID'])
-        if price:
-            if check_alert_triggered(price, stock['trigger']):
-                send_telegram_alert(stock)
-                print(f"✓ Alert: {stock['name']}")
-            else:
-                print(f"✓ {stock['name']}: ₹{price:.2f}")
-        else:
-            print(f"⚠️ No price data for {stock['name']}")
+now = datetime.now(IST)
+print(f"\n⏰ IST Time: {now}")
 
-def run_periodically():
-    """Run monitor_stocks every 15 minutes"""
-    print("🔄 Starting periodic stock monitor (15 min intervals)")
-    
-    # Run immediately
-    monitor_stocks()
-    
-    # Schedule every 15 minutes
-    schedule.every(15).minutes.do(monitor_stocks)
-    
-    # Keep running
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
+```
+# ✅ Weekday check (Mon–Fri)
+if now.weekday() >= 5:
+    print("⛔ Weekend - Skipping")
+    return
 
-if __name__ == "__main__":
-    # Check if running as cron job or periodically
-    if os.environ.get('RUN_PERIODICALLY') == 'true':
-        run_periodically()
+# ✅ Market hours (IST)
+start = now.replace(hour=9, minute=15, second=0, microsecond=0)
+end   = now.replace(hour=15, minute=30, second=0, microsecond=0)
+
+if not (start <= now <= end):
+    print("⛔ Outside market hours")
+    return
+
+stocks = read_sheet_data()
+
+if not stocks:
+    print("No stocks found")
+    return
+
+for stock in stocks:
+    price = get_live_price(stock['ID'])
+    if price and price >= stock['trigger']:
+        send_telegram_alert(stock, price)
+        print(f"🚨 Alert sent: {stock['name']}")
+    elif price:
+        print(f"{stock['name']}: ₹{price:.2f}")
     else:
-        monitor_stocks()
+        print(f"⚠️ No data: {stock['name']}")
+```
 
-from flask import Flask, request
+# ================= FLASK =================
 
-app = Flask(__name__)
+app = Flask(**name**)
 
 @app.route("/")
 def home():
-    return "Server is running"
+return "Server is running"
 
 @app.route("/run")
 def run():
-    key = request.args.get("key")
-    
-    if key != "secret123":
-        return "Unauthorized", 403
+key = request.args.get("key")
 
-    monitor_stocks()
-    return "Script executed"
+```
+if key != "secret123":
+    return "Unauthorized", 403
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+monitor_stocks()
+return "Executed"
+```
+
+# ================= START =================
+
+if **name** == "**main**":
+port = int(os.environ.get("PORT", 10000))
+app.run(host="0.0.0.0", port=port)
