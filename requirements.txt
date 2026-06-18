@@ -3,4 +3,4 @@ google-auth
 google-auth-oauthlib
 pyTelegramBotAPI
 yfinance
-schedule==1.2.2
+pytz
