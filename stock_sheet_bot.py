@@ -54,10 +54,11 @@ def read_sheet_data():
                     'SL': row[9],              # J: SL
                     'T&T': row[10],            # K: T&T
                     'remarks': row[11]         # L: Remarks
+                    print (stocks)
                 })
             except ValueError:
                 continue
-                print (stocks)
+                
     return stocks
 
 def get_live_price(symbol):
