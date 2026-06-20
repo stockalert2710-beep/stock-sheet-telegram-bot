@@ -74,7 +74,7 @@ def read_sheet_data():
                 'price_bo': row[6],
                 'rsi_bo': row[7],
                 'trigger': float(row[8]),
-                'buying_zone': row[9],
+                'Condition': row[9],
                 'SL': row[10],
                 'T&T': row[11],
                 'remarks': row[12]
