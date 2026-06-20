@@ -65,6 +65,13 @@ def read_sheet_data():
             formatted_symbol = get_formatted_symbol(ID, exchange)
             print(f"  📝 Exchange: {exchange}, ID: {ID} -> Formatted: {formatted_symbol}")
             
+            # Get condition from column J (index 9) - "more than" or "less than"
+            condition = row[9].lower().strip() if row[9] else ''
+            
+            if condition not in ['more than', 'less than']:
+                print(f"  Skip: invalid condition '{row[9]}' (must be 'more than' or 'less than')")
+                continue
+            
             stocks.append({
                 'name': row[1],
                 'exchange': exchange,
@@ -74,12 +81,12 @@ def read_sheet_data():
                 'price_bo': row[6],
                 'rsi_bo': row[7],
                 'trigger': float(row[8]),
-                'Condition': row[9],
+                'condition': condition,  # New field for condition
                 'SL': row[10],
                 'T&T': row[11],
                 'remarks': row[12]
             })
-            print(f"  ✅ Added: {row[1]}")
+            print(f"  ✅ Added: {row[1]} (Condition: {condition}, Trigger: {row[8]})")
         except ValueError as e:
             print(f"  ❌ Skip: {e}")
     
@@ -103,16 +110,27 @@ def get_live_price(symbol):
     except:
         return None
 
-def check_alert_triggered(cmp, trigger):
-    return cmp >= trigger
+def check_alert_triggered(cmp, trigger, condition):
+    """
+    Check if alert should be triggered based on condition
+    condition = 'more than' -> cmp >= trigger
+    condition = 'less than' -> cmp <= trigger
+    """
+    if condition == 'more than':
+        return cmp >= trigger
+    elif condition == 'less than':
+        return cmp <= trigger
+    return False
 
 def send_telegram_alert(stock):
+    current_price = get_live_price(stock['symbol'])
     message = f"""🚨 ALERT! 🚨
 
 Stock: {stock['name']} ({stock['ID']})
 Exchange: {stock['exchange']}
+Condition: {stock['condition'].upper()}
 Trigger: ₹{stock['trigger']}
-Current: ₹{get_live_price(stock['symbol'])}
+Current: ₹{current_price}
 Remarks: {stock['remarks']}"""
     
     bot = telebot.TeleBot(BOT_TOKEN)
@@ -133,11 +151,13 @@ def monitor_stocks():
         # Use formatted symbol with exchange suffix
         price = get_live_price(stock['symbol'])
         if price:
-            if check_alert_triggered(price, stock['trigger']):
+            # Check if alert should be triggered based on condition
+            if check_alert_triggered(price, stock['trigger'], stock['condition']):
                 send_telegram_alert(stock)
-                print(f"✓ Alert: {stock['name']}")
+                print(f"✓ Alert: {stock['name']} ({stock['condition']})")
             else:
-                print(f"✓ {stock['name']} ({stock['exchange']}): ₹{price:.2f}")
+                condition_symbol = '>' if stock['condition'] == 'more than' else '<'
+                print(f"✓ {stock['name']} ({stock['exchange']}): ₹{price:.2f} {condition_symbol} ₹{stock['trigger']}")
         else:
             print(f"⚠️ No price data for {stock['name']}")
 
