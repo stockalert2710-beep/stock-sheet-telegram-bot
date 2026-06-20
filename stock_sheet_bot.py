@@ -15,36 +15,23 @@ SPREADSHEET_ID = '1Fq8dKl_72XqdrAcA6atIl5kD23lnkYKSzH4wVNCyQUs'
 BOT_TOKEN = '8988067878:AAHk4G1XsUicBOtfoG_yfLugt9uhtuYus9k'
 BOT_CHAT_ID = '615256683'
 
-# Trading hours configuration (IST)
-TRADING_START_HOUR = 9
-TRADING_START_MINUTE = 0
-TRADING_END_HOUR = 15
-TRADING_END_MINUTE = 30
 
-def is_trading_time():
+
+# Exchange suffix mapping for yfinance
+EXCHANGE_SUFFIX = {
+    'NSE': '.NS',
+    'BSE': '.BO'
+}
+
+
+def get_formatted_symbol(ID, exchange):
     """
-    Check if current time is within trading hours (9:00 AM to 3:30 PM IST, Monday-Friday)
+    Add exchange suffix to ID based on exchange type
+    NSE -> .NS, BSE -> .BO
     """
-    # Get current time in IST
-    ist_now = datetime.datetime.now(datetime.timezone.utc)
-    # Convert to IST (UTC + 5:30)
-    ist_offset = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
-    ist_now = ist_now.astimezone(ist_offset)
-    
-    current_hour = ist_now.hour
-    current_minute = ist_now.minute
-    current_weekday = ist_now.weekday()  # 0=Monday, 4=Friday
-    
-    # Check if it's Monday to Friday (weekday 0-4)
-    if current_weekday > 4:
-        return False
-    
-    # Check if time is within 9:00 AM to 3:30 PM
-    start_time = current_hour * 60 + current_minute
-    end_time = TRADING_END_HOUR * 60 + TRADING_END_MINUTE
-    current_time = current_hour * 60 + current_minute
-    
-    return TRADING_START_HOUR * 60 + TRADING_START_MINUTE <= current_time <= end_time
+    if exchange in EXCHANGE_SUFFIX:
+        return ID + EXCHANGE_SUFFIX[exchange]
+    return ID  # Return as-is if exchange not recognized
 
 def connect_to_sheets():
     credentials_dict = json.loads(SERVICE_ACCOUNT_JSON)
@@ -82,10 +69,19 @@ def read_sheet_data():
             continue
         
         try:
+            # Get exchange from column C (index 2)
+            exchange = row[2]
+            ID = row[3]
+            
+            # Format symbol with exchange suffix
+            formatted_symbol = get_formatted_symbol(ID, exchange)
+            print(f"  📝 Exchange: {exchange}, ID: {ID} -> Formatted: {formatted_symbol}")
+            
             stocks.append({
                 'name': row[1],
-                'exchange': row[2],
-                'ID': row[3],
+                'exchange': exchange,
+                'ID': ID,
+                'symbol': formatted_symbol,  # New field with formatted symbol
                 'elliot_position': row[5],
                 'price_bo': row[6],
                 'rsi_bo': row[7],
@@ -117,8 +113,9 @@ def send_telegram_alert(stock):
     message = f"""🚨 ALERT! 🚨
 
 Stock: {stock['name']} ({stock['ID']})
+Exchange: {stock['exchange']}
 Trigger: ₹{stock['trigger']}
-Current: ₹{get_live_price(stock['ID'])}
+Current: ₹{get_live_price(stock['symbol'])}
 Remarks: {stock['remarks']}"""
     
     bot = telebot.TeleBot(BOT_TOKEN)
@@ -141,13 +138,14 @@ def monitor_stocks():
         return
     
     for stock in stocks:
-        price = get_live_price(stock['ID'])
+        # Use formatted symbol with exchange suffix
+        price = get_live_price(stock['symbol'])
         if price:
             if check_alert_triggered(price, stock['trigger']):
                 send_telegram_alert(stock)
                 print(f"✓ Alert: {stock['name']}")
             else:
-                print(f"✓ {stock['name']}: ₹{price:.2f}")
+                print(f"✓ {stock['name']} ({stock['exchange']}): ₹{price:.2f}")
         else:
             print(f"⚠️ No price data for {stock['name']}")
 
@@ -155,11 +153,6 @@ def run_periodically():
     """Run monitor_stocks every 15 minutes within trading hours only"""
     print("🔄 Starting periodic stock monitor (15 min intervals, 9:00 AM - 3:30 PM IST, Mon-Fri)")
     
-    # Run immediately if within trading hours
-    if is_trading_time():
-        monitor_stocks()
-    else:
-        print("⏸️ Not in trading hours. Will start monitoring when trading begins.")
     
     # Schedule every 15 minutes
     schedule.every(15).minutes.do(monitor_stocks)
