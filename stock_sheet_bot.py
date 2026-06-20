@@ -8,11 +8,43 @@ import time
 import os
 import json
 import schedule
+from flask import Flask, request
 
 SERVICE_ACCOUNT_JSON = os.environ.get('SERVICE_ACCOUNT_JSON')
 SPREADSHEET_ID = '1Fq8dKl_72XqdrAcA6atIl5kD23lnkYKSzH4wVNCyQUs'
 BOT_TOKEN = '8988067878:AAHk4G1XsUicBOtfoG_yfLugt9uhtuYus9k'
 BOT_CHAT_ID = '615256683'
+
+# Trading hours configuration (IST)
+TRADING_START_HOUR = 9
+TRADING_START_MINUTE = 0
+TRADING_END_HOUR = 15
+TRADING_END_MINUTE = 30
+
+def is_trading_time():
+    """
+    Check if current time is within trading hours (9:00 AM to 3:30 PM IST, Monday-Friday)
+    """
+    # Get current time in IST
+    ist_now = datetime.datetime.now(datetime.timezone.utc)
+    # Convert to IST (UTC + 5:30)
+    ist_offset = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
+    ist_now = ist_now.astimezone(ist_offset)
+    
+    current_hour = ist_now.hour
+    current_minute = ist_now.minute
+    current_weekday = ist_now.weekday()  # 0=Monday, 4=Friday
+    
+    # Check if it's Monday to Friday (weekday 0-4)
+    if current_weekday > 4:
+        return False
+    
+    # Check if time is within 9:00 AM to 3:30 PM
+    start_time = current_hour * 60 + current_minute
+    end_time = TRADING_END_HOUR * 60 + TRADING_END_MINUTE
+    current_time = current_hour * 60 + current_minute
+    
+    return TRADING_START_HOUR * 60 + TRADING_START_MINUTE <= current_time <= end_time
 
 def connect_to_sheets():
     credentials_dict = json.loads(SERVICE_ACCOUNT_JSON)
@@ -94,6 +126,13 @@ Remarks: {stock['remarks']}"""
 
 def monitor_stocks():
     print(f"\n⏰ Running stock check at {datetime.datetime.now()}")
+    
+    # Check if current time is within trading hours
+    if not is_trading_time():
+        print("⏸️ Outside trading hours (9:00 AM - 3:30 PM IST, Mon-Fri). Skipping...")
+        return
+    
+    print("✅ Within trading hours. Proceeding with stock monitoring...")
     stocks = read_sheet_data()
     print(f"\n📦 Stocks: {stocks}")
     
@@ -113,11 +152,14 @@ def monitor_stocks():
             print(f"⚠️ No price data for {stock['name']}")
 
 def run_periodically():
-    """Run monitor_stocks every 15 minutes"""
-    print("🔄 Starting periodic stock monitor (15 min intervals)")
+    """Run monitor_stocks every 15 minutes within trading hours only"""
+    print("🔄 Starting periodic stock monitor (15 min intervals, 9:00 AM - 3:30 PM IST, Mon-Fri)")
     
-    # Run immediately
-    monitor_stocks()
+    # Run immediately if within trading hours
+    if is_trading_time():
+        monitor_stocks()
+    else:
+        print("⏸️ Not in trading hours. Will start monitoring when trading begins.")
     
     # Schedule every 15 minutes
     schedule.every(15).minutes.do(monitor_stocks)
@@ -133,8 +175,6 @@ if __name__ == "__main__":
         run_periodically()
     else:
         monitor_stocks()
-
-from flask import Flask, request
 
 app = Flask(__name__)
 
