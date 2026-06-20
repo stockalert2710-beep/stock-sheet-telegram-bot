@@ -21,30 +21,7 @@ TRADING_START_MINUTE = 0
 TRADING_END_HOUR = 15
 TRADING_END_MINUTE = 30
 
-def is_trading_time():
-    """
-    Check if current time is within trading hours (9:00 AM to 3:30 PM IST, Monday-Friday)
-    """
-    # Get current time in IST
-    ist_now = datetime.datetime.now(datetime.timezone.utc)
-    # Convert to IST (UTC + 5:30)
-    ist_offset = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
-    ist_now = ist_now.astimezone(ist_offset)
-    
-    current_hour = ist_now.hour
-    current_minute = ist_now.minute
-    current_weekday = ist_now.weekday()  # 0=Monday, 4=Friday
-    
-    # Check if it's Monday to Friday (weekday 0-4)
-    if current_weekday > 4:
-        return False
-    
-    # Check if time is within 9:00 AM to 3:30 PM
-    start_time = current_hour * 60 + current_minute
-    end_time = TRADING_END_HOUR * 60 + TRADING_END_MINUTE
-    current_time = current_hour * 60 + current_minute
-    
-    return TRADING_START_HOUR * 60 + TRADING_START_MINUTE <= current_time <= end_time
+
 
 def connect_to_sheets():
     credentials_dict = json.loads(SERVICE_ACCOUNT_JSON)
