@@ -15,23 +15,11 @@ SPREADSHEET_ID = '1Fq8dKl_72XqdrAcA6atIl5kD23lnkYKSzH4wVNCyQUs'
 BOT_TOKEN = '8988067878:AAHk4G1XsUicBOtfoG_yfLugt9uhtuYus9k'
 BOT_CHAT_ID = '615256683'
 
-
-
 # Exchange suffix mapping for yfinance
 EXCHANGE_SUFFIX = {
     'NSE': '.NS',
     'BSE': '.BO'
 }
-
-
-def get_formatted_symbol(ID, exchange):
-    """
-    Add exchange suffix to ID based on exchange type
-    NSE -> .NS, BSE -> .BO
-    """
-    if exchange in EXCHANGE_SUFFIX:
-        return ID + EXCHANGE_SUFFIX[exchange]
-    return ID  # Return as-is if exchange not recognized
 
 def connect_to_sheets():
     credentials_dict = json.loads(SERVICE_ACCOUNT_JSON)
@@ -98,6 +86,15 @@ def read_sheet_data():
     print(f"\n📊 Total: {len(stocks)} stocks")
     return stocks
 
+def get_formatted_symbol(ID, exchange):
+    """
+    Add exchange suffix to ID based on exchange type
+    NSE -> .NS, BSE -> .BO
+    """
+    if exchange in EXCHANGE_SUFFIX:
+        return ID + EXCHANGE_SUFFIX[exchange]
+    return ID  # Return as-is if exchange not recognized
+
 def get_live_price(symbol):
     try:
         stock = yf.Ticker(symbol)
@@ -124,12 +121,7 @@ Remarks: {stock['remarks']}"""
 def monitor_stocks():
     print(f"\n⏰ Running stock check at {datetime.datetime.now()}")
     
-    # Check if current time is within trading hours
-    if not is_trading_time():
-        print("⏸️ Outside trading hours (9:00 AM - 3:30 PM IST, Mon-Fri). Skipping...")
-        return
-    
-    print("✅ Within trading hours. Proceeding with stock monitoring...")
+    print("✅ Proceeding with stock monitoring...")
     stocks = read_sheet_data()
     print(f"\n📦 Stocks: {stocks}")
     
@@ -150,9 +142,11 @@ def monitor_stocks():
             print(f"⚠️ No price data for {stock['name']}")
 
 def run_periodically():
-    """Run monitor_stocks every 15 minutes within trading hours only"""
-    print("🔄 Starting periodic stock monitor (15 min intervals, 9:00 AM - 3:30 PM IST, Mon-Fri)")
+    """Run monitor_stocks every 15 minutes"""
+    print("🔄 Starting periodic stock monitor (15 min intervals)")
     
+    # Run immediately
+    monitor_stocks()
     
     # Schedule every 15 minutes
     schedule.every(15).minutes.do(monitor_stocks)
